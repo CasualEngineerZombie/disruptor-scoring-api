@@ -1,8 +1,6 @@
-# Mini Disruptor Scoring Endpoint (LangChain + Tools)
+# Mini Disruptor Scoring Endpoint (LangChain + Groq)
 
-## Overview
-
-This is a small FastAPI demo that scores a company as a **disruptor** using an LLM (LangChain + ChatGroq) and company info from **Yahoo Finance** (`yfinance`).
+Tiny FastAPI demo that uses Groq + LangChain to score how disruptive a company is. Pulls real-time data from Yahoo Finance (`yfinance`) and returns clean JSON.
 
 The API validates the stock ticker, fetches company info, and then generates a short JSON report containing:
 
@@ -14,88 +12,105 @@ The API validates the stock ticker, fetches company info, and then generates a s
 
 ## Features
 
-1. **Ticker validation** – ensures the ticker exists.
-2. **Company info augmentation** – provides the LLM with real company data.
-3. **LangChain v1 integration** – generates structured JSON output.
-4. **Error handling** – invalid tickers or malformed responses return clear HTTP errors.
+* Validates real stock tickers
+* Fetches live company data from Yahoo Finance
+* Forces the LLM to return valid JSON (using Pydantic output parser)
+* Proper error handling (400/404/500 with clear messages)
 
 ---
 
 ## Requirements
 
 * Python 3.11+
-* Install dependencies using uv (Universal Python Package Manager):
-
-```
-uv install -r requirements.txt
-```
-
-* Create a `.env` file in the root directory with your Groq API key:
-
-```
-GROQ_API_KEY=gsk_...
-```
-
-* Get your API key from: [https://groq.com/](https://groq.com/)
+* **uv** (faster than pip/poetry, recommended)
 
 ---
 
-## Usage
+## Setup (2025 style)
 
-### Run locally
+1. **Install uv** if you don’t have it:
 
-```
-uv run uvicorn main:app --reload
-```
-
-The API will run at:
-
-```
-http://127.0.0.1:8000
+```bash
+pip install uv   # or brew install uv, or curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### Endpoint
+2. **Clone the repo** and cd into it
+
+3. **Install dependencies**
+
+* With `pyproject.toml` (creates venv + installs all deps including dev):
+
+```bash
+uv sync --frozen
+```
+
+* With `requirements.txt` only:
+
+```bash
+py -m venv .venv
+.venv/scripts/activate
+pip install -r requirements.txt
+```
+
+4. **Configure your .env**
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` and add your Groq key:
+
+```text
+GROQ_API_KEY=gsk_your_key_here
+```
+
+Get one for free at: [https://console.groq.com/keys](https://console.groq.com/keys)
+
+---
+
+## How to run
+
+```bash
+uv run fastapi dev
+```
+or 
+
+```bash
+fastapi dev
+```
+
+ 
+Swagger docs → [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+---
+
+## Endpoint
 
 `POST /score-company`
 
 **Request Body**
 
-```
+```json
 {
-  "ticker": "TSLA"
+  "ticker": "NVDA"
 }
 ```
 
 **Example Response**
 
-```
+```json
 {
-  "ticker": "TSLA",
-  "summary": "Tesla is revolutionizing the automotive industry with electric vehicles and sustainable energy solutions...",
-  "risk_score": 3,
+  "ticker": "NVDA",
+  "summary": "NVIDIA basically prints money with AI chips and has a near monopoly on training hardware...",
+  "risk_score": 2,
   "opportunity_score": 5
 }
 ```
 
-### Errors
-
-* `400 Bad Request` – ticker format invalid (non-alpha or >5 chars)
-* `404 Not Found` – ticker does not exist
-* `500 Internal Server Error` – LLM returned invalid JSON or other unexpected errors
-
 ---
 
-## Assumptions
+## Error Responses
 
-* Only US tickers are supported (Yahoo Finance coverage).
-* LLM responses are expected in JSON format.
-* No database or authentication; intended for local demo/testing.
-
----
-
-## Improvements (Future)
-
-* Add HTML output option (lightweight snippet).
-* Cache ticker/company info to reduce repeated API calls.
-* Extend to international tickers or other exchanges.
-* Retry mechanism for LLM failures or timeouts.
+* `400` → invalid ticker (numbers, too long, garbage)
+* `404` → ticker doesn’t exist on Yahoo Finance
+* `500` → LLM returned invalid JSON (rare with Groq + output parser)
